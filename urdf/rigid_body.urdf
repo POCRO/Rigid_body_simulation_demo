@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot name="rigid_body">
+  <!-- Base link -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="50 50 25"/> <!-- 长方体尺寸：长1m，宽0.5m，高0.25m -->
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/> <!-- 蓝色 -->
+      </material>
+    </visual>
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.02" iyy="0.02" izz="0.02" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Dummy link -->
+  <link name="dummy_link">
+    <visual>
+      <origin xyz="0 0 1" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.1"/> <!-- 一个半径为0.1m的球体 -->
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色 -->
+      </material>
+    </visual>
+  </link>
+
+  <!-- Joint between base_link and dummy_link -->
+  <joint name="base_to_dummy" type="fixed">
+    <parent link="base_link"/>
+    <child link="dummy_link"/>
+    <origin xyz="0 0 1" rpy="0 0 0"/>
+  </joint>
+</robot>
