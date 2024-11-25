@@ -3,6 +3,8 @@ rigid_body_node:
     mass: 1.0 # 质量（kg）
     friction_coefficient: 0.1 # 摩擦系数
     lift_coefficient: 0.001 # 升力系数
+    side_coefficient: 0.001 # 侧力系数
+    thrust_coefficient: 0.001 # 推力系数
     time_step: 0.01  # 时间步长 (s)
     inertia: [10.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0]
     external_force: [10.0, 0.0, 1.0] # 外力

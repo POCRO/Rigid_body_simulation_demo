@@ -48,7 +48,7 @@ class RigidBodyNode : public rclcpp::Node {
 
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::TimerBase::SharedPtr timer_;
-    double mass_, friction_, time_step_, dt_, lift_coefficient_;
+    double mass_, friction_, time_step_, dt_, lift_coefficient_,side_coefficient_;
     /**
      * @brief         状态更新
      * @author Porcovsky (flyingpocro@gmail.com)

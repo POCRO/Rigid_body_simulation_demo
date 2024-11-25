@@ -14,6 +14,8 @@ namespace rigid_body_simulation
         this->declare_parameter<double>("friction_coefficient", 0.0);
         this->declare_parameter<double>("time_step", 0.01);
         this->declare_parameter<double>("lift_coefficient", 0.5);
+        this->declare_parameter<double>("side_coefficient", 0.0);
+
         this->declare_parameter<std::vector<double>>(
             "inertia", {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
 
@@ -32,6 +34,7 @@ namespace rigid_body_simulation
         friction_ = get_parameter("friction_coefficient").as_double();
         dt_ = get_parameter("time_step").as_double();
         lift_coefficient_ = get_parameter("lift_coefficient").as_double();
+        side_coefficient_ = get_parameter("side_coefficient").as_double();
 
         std::vector<double> inertia_vec =
             get_parameter("inertia").as_double_array();
@@ -127,6 +130,9 @@ namespace rigid_body_simulation
 
 //     RigidBodyState initial_state_;
 
+double cnt = 0;
+
+// 刚体状态更新
     void RigidBodyNode::update() {
         // 使用 Runge-Kutta 方法更新状态
         Eigen::Vector3d force = compute_force(current_state);
@@ -135,6 +141,13 @@ namespace rigid_body_simulation
                              mass_, inertia_, dt_);
             // 发布轨迹 Marker
         // trajectory_visualizer->add_position(current_state.position);
+
+        std::cout << "hello" <<std::endl;
+
+        
+        // // 打印日志信息
+        // RCLCPP_INFO(this->get_logger(), "position: %.2f %.2f %.2f", 
+        //     current_state.x(), current_state.y(), current_state.y());
 
         // 发布状态更新到 TF
         geometry_msgs::msg::TransformStamped transform;
@@ -151,6 +164,8 @@ namespace rigid_body_simulation
         tf_broadcaster_->sendTransform(transform);
     }
 
+// 刚体受力计算
+
     Eigen::Vector3d RigidBodyNode::compute_force(const RigidBodyState& state) {
         // 重力
         Eigen::Vector3d gravity_force(0, 0, -mass_ * 9.81);
@@ -158,25 +173,44 @@ namespace rigid_body_simulation
         // 恒外力
         Eigen::Vector3d constant_force = external_force_;
 
-        // 摩擦力
-        Eigen::Vector3d friction_force = -friction_ * state.velocity;
+        // 气动力 之 摩擦阻力部分
+        // 摩擦力方向与速度方向相反
+        Eigen::Vector3d friction_force = -friction_ * state.velocity* state.velocity.norm();
 
-        // 升力
+        // 气动力 之 升力
+        //升力方向垂直与速度方向向上
         Eigen::Vector3d lift_force(0, 0, 0);
         if (state.velocity.norm() > 1e-6) { // 确保速度非零，避免除以零
             Eigen::Vector3d upward_vector(0, 0, 1); // 垂直向上的基准方向
             Eigen::Vector3d lift_direction = state.velocity.cross(upward_vector).normalized(); // 升力方向
             lift_force = lift_coefficient_ * state.velocity.squaredNorm() * lift_direction; // 升力大小
         }
+
+        // 气动力 之 侧力 升力
+        // 侧力方向垂直于速度方向
+        Eigen::Vector3d side_force(0, 0, 0);
+        if (state.velocity.norm() > 1e-6) { // 确保速度非零，避免除以零
+            Eigen::Vector3d upward_vector(0, 0, 1); // 垂直向上的基准方向
+            Eigen::Vector3d side_direction = state.velocity.cross(upward_vector).normalized(); // 侧力方向
+            side_force = side_coefficient_ * state.velocity.squaredNorm() * side_direction; // 侧力大小
+
+            Eigen::Vector3d lift_direction = side_direction.cross(state.velocity).normalized(); // 升力方向
+            lift_force = lift_coefficient_ * state.velocity.squaredNorm() * lift_direction; // 升力大小
+
+        }
+
+
+
         // 发布力方向 Marker
         // force_visualizer->publish_force_markers(position_, lift_force, constant_force, friction_force);
 
 
 
         // 总力
-        return gravity_force + constant_force + friction_force + lift_force;
+        return gravity_force + constant_force + friction_force + lift_force + side_force;
     }
-    // 微分方程的计算
+    
+// 微分方程的计算
 RigidBodyState RigidBodyNode::compute_derivatives(const RigidBodyState& state,
                                    const Eigen::Vector3d& force,
                                    const Eigen::Vector3d& torque, double mass,
@@ -203,6 +237,8 @@ RigidBodyState RigidBodyNode::compute_derivatives(const RigidBodyState& state,
 
     return derivatives;
 }
+
+// 四阶龙哥库塔
 
 RigidBodyState RigidBodyNode::runge_kutta_step(const RigidBodyState& current_state,
                                 const Eigen::Vector3d& force,
@@ -259,10 +295,22 @@ RigidBodyState RigidBodyNode::runge_kutta_step(const RigidBodyState& current_sta
     // 归一化四元数
     next_state.orientation.normalize();
 
+    if (cnt >1000)
+        {
+            cnt = 0;
+            // 打印日志信息
+            std::cout << "position [x,y,z]:" << current_state.x() << current_state.z() << current_state.z() <<std::endl;
+        // RCLCPP_INFO(this->get_logger(), "position: %.2f %.2f %.2f", 
+        //     current_state.x(), current_state.y(), current_state.y());
+        }
+        cnt++;
+
+
     return next_state;
 }
 
 }
+// 主函数
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
 
