@@ -1,4 +1,14 @@
+/**
+ * @file rigid_body_node.cpp
+ * @brief  刚体实现   https://github.com/POCRO/Rigid_body_simulation_demo     
+ * @author Porcovsky (flyingpocro@gmail.com)
+ * @date          2024-11-25
+ * 
+ * 
+ * @copyright Copyright (C) 2024, PORCOVSKY, all rights reserved.
+ * 
 
+ */
 #include "rigid_body_node.hpp"
 
 
