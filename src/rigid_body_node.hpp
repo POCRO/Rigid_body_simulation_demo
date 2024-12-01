@@ -11,7 +11,7 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "visualization_msgs/msg/marker.hpp"
-
+//#include <stdio.h>
 namespace rigid_body_simulation {
 
 // 刚体状态结构体

@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/yy/code/Code_on_new_ubuntu/code/tudat_demo/build",
+  "command": "/usr/bin/c++  -I/home/yy/tudatBundle -I/home/yy/tudatBundle/tudat -I/home/yy/tudatBundle/tudat/Tudat/Astrodynamics/Aerodynamics -I/home/yy/tudatBundle/tudat/Tudat/SimulationSetup -I/usr/include/eigen3 -g -std=gnu++17 -o CMakeFiles/tudat_demo.dir/src/main.cpp.o -c /home/yy/code/Code_on_new_ubuntu/code/tudat_demo/src/main.cpp",
+  "file": "/home/yy/code/Code_on_new_ubuntu/code/tudat_demo/src/main.cpp"
+}
+]

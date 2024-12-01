@@ -152,7 +152,17 @@ double cnt = 0;
             // 发布轨迹 Marker
         // trajectory_visualizer->add_position(current_state.position);
 
-        std::cout << "hello" <<std::endl;
+        // std::cout << "hello" <<std::endl;
+
+        // if (cnt >1000)
+        // {
+        //     cnt = 0;
+        //     // 打印日志信息
+        //     std::cout << "position [x,y,z]:" << current_state.x() << current_state.z() << current_state.z() <<std::endl;
+        // // RCLCPP_INFO(this->get_logger(), "position: %.2f %.2f %.2f", 
+        // //     current_state.x(), current_state.y(), current_state.y());
+        // }
+        // cnt++;
 
         
         // // 打印日志信息
@@ -305,17 +315,6 @@ RigidBodyState RigidBodyNode::runge_kutta_step(const RigidBodyState& current_sta
     // 归一化四元数
     next_state.orientation.normalize();
 
-    if (cnt >1000)
-        {
-            cnt = 0;
-            // 打印日志信息
-            std::cout << "position [x,y,z]:" << current_state.x() << current_state.z() << current_state.z() <<std::endl;
-        // RCLCPP_INFO(this->get_logger(), "position: %.2f %.2f %.2f", 
-        //     current_state.x(), current_state.y(), current_state.y());
-        }
-        cnt++;
-
-
     return next_state;
 }
 
@@ -323,6 +322,7 @@ RigidBodyState RigidBodyNode::runge_kutta_step(const RigidBodyState& current_sta
 // 主函数
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
+        
 
     rclcpp::spin(std::make_shared<rigid_body_simulation::RigidBodyNode>());
     rclcpp::shutdown();
