@@ -11,7 +11,7 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "visualization_msgs/msg/marker.hpp"
-//#include <stdio.h>
+// #include <stdio.h>
 namespace rigid_body_simulation {
 
 // 刚体状态结构体
@@ -39,6 +39,10 @@ class RigidBodyNode : public rclcpp::Node {
     Eigen::Vector3d external_torque_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d gravity_ = Eigen::Vector3d::Zero();
 
+    std::vector<Eigen::Vector3d> trajectory_;
+
+
+
     Eigen::Quaterniond orientation_ = Eigen::Quaterniond::Identity();
     Eigen::Matrix3d inertia_ = Eigen::Matrix3d::Identity();
 
@@ -46,9 +50,12 @@ class RigidBodyNode : public rclcpp::Node {
 
     RigidBodyState current_state = initial_state_;
 
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr trajectory_publisher_;
+
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::TimerBase::SharedPtr timer_;
-    double mass_, friction_, time_step_, dt_, lift_coefficient_,side_coefficient_;
+    double mass_, friction_, time_step_, dt_, lift_coefficient_,
+        side_coefficient_,rou_0_,S_;
     /**
      * @brief         状态更新
      * @author Porcovsky (flyingpocro@gmail.com)
@@ -57,13 +64,13 @@ class RigidBodyNode : public rclcpp::Node {
     /**
      * @brief         受力计算函数
      * @param[in] state         My Param doc
-     * @return Eigen::Vector3d 
+     * @return Eigen::Vector3d
      * @author Porcovsky (flyingpocro@gmail.com)
      */
     Eigen::Vector3d compute_force(const RigidBodyState& state);
     /**
      * @brief         状态空间微分计算
-     * @return RigidBodyState 
+     * @return RigidBodyState
      * @author Porcovsky (flyingpocro@gmail.com)
      */
     RigidBodyState compute_derivatives(const RigidBodyState& state,
@@ -71,15 +78,23 @@ class RigidBodyNode : public rclcpp::Node {
                                        const Eigen::Vector3d& torque,
                                        double mass,
                                        const Eigen::Matrix3d& inertia);
-   /**
-    * @brief         四阶龙哥库塔法函数
-    * @return RigidBodyState 
-    * @author Porcovsky (flyingpocro@gmail.com)
-    */
+    /**
+     * @brief         四阶龙哥库塔法函数
+     * @return RigidBodyState
+     * @author Porcovsky (flyingpocro@gmail.com)
+     */
     RigidBodyState runge_kutta_step(const RigidBodyState& current_state,
                                     const Eigen::Vector3d& force,
                                     const Eigen::Vector3d& torque, double mass,
                                     const Eigen::Matrix3d& inertia, double dt);
+    /**
+     * @brief 轨迹发布与显示函数
+     * @author Porcovsky (flyingpocro@gmail.com)
+     */
+    void publishTrajectory(
+        const std::vector<Eigen::Vector3d>& trajectory);
+
+        void saveTrajectory(const Eigen::Vector3d& position, const std::string& filename) ;
 };
 }  // namespace rigid_body_simulation
 

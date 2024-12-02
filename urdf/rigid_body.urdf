@@ -5,7 +5,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <box size="50 50 25"/> <!-- 长方体尺寸：长1m，宽0.5m，高0.25m -->
+        <box size="1 0.25 0.25"/> <!-- 长方体尺寸：长1m，宽0.5m，高0.25m -->
       </geometry>
       <material name="blue">
         <color rgba="0 0 1 1"/> <!-- 蓝色 -->

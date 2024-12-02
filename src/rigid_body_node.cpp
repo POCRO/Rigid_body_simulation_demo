@@ -10,10 +10,47 @@
 
  */
 #include "rigid_body_node.hpp"
+#include <fstream>
+
 
 
 namespace rigid_body_simulation
 {
+
+// 假设 position 是 Eigen::Vector3d
+void RigidBodyNode::saveTrajectory(const Eigen::Vector3d& position, const std::string& filename) {
+    static std::ofstream file(filename, std::ios::app); // 打开文件 (追加模式)
+    if (!file.is_open()) {
+        throw std::ios_base::failure("Failed to open file for trajectory logging.");
+    }
+
+    file << position.x() << "," << position.y() << "," << position.z() << "\n"; // 写入 x, y, z
+}
+
+    void RigidBodyNode::publishTrajectory(const std::vector<Eigen::Vector3d>& trajectory) {
+    visualization_msgs::msg::Marker marker;
+    marker.header.frame_id = "world";
+    marker.ns = "trajectory";
+    marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+
+    marker.scale.x = 0.5; // 线条宽度
+    marker.color.a = 1.0;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+
+    for (const auto& state : trajectory) {
+        geometry_msgs::msg::Point p;
+        p.x = state[0]/1000.0;
+        p.y = state[1]/1000.0;
+        p.z = state[2]/1000.0;
+        marker.points.push_back(p);
+    }
+
+    trajectory_publisher_->publish(marker);
+    }
+
     RigidBodyNode::RigidBodyNode() : Node("rigid_body_simulation") {
 
      //   force_visualizer = std::make_shared<ForceVisualizer>();
@@ -25,6 +62,9 @@ namespace rigid_body_simulation
         this->declare_parameter<double>("time_step", 0.01);
         this->declare_parameter<double>("lift_coefficient", 0.5);
         this->declare_parameter<double>("side_coefficient", 0.0);
+        this->declare_parameter<double>("rou_0", 0.0);
+        this->declare_parameter<double>("S", 0.0);
+
 
         this->declare_parameter<std::vector<double>>(
             "inertia", {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
@@ -45,6 +85,9 @@ namespace rigid_body_simulation
         dt_ = get_parameter("time_step").as_double();
         lift_coefficient_ = get_parameter("lift_coefficient").as_double();
         side_coefficient_ = get_parameter("side_coefficient").as_double();
+        rou_0_ = get_parameter("rou_0").as_double();
+        S_ = get_parameter("S").as_double();
+        
 
         std::vector<double> inertia_vec =
             get_parameter("inertia").as_double_array();
@@ -123,6 +166,8 @@ namespace rigid_body_simulation
         // 将当前状态设置为初始状态
         current_state = initial_state_;
 
+        trajectory_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>("trajectory_marker", 10);
+
         tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(static_cast<int>(dt_ * 1000)),
@@ -149,34 +194,24 @@ double cnt = 0;
         current_state =
             runge_kutta_step(current_state, force, external_torque_,
                              mass_, inertia_, dt_);
-            // 发布轨迹 Marker
-        // trajectory_visualizer->add_position(current_state.position);
-
-        // std::cout << "hello" <<std::endl;
-
-        // if (cnt >1000)
-        // {
-        //     cnt = 0;
-        //     // 打印日志信息
-        //     std::cout << "position [x,y,z]:" << current_state.x() << current_state.z() << current_state.z() <<std::endl;
-        // // RCLCPP_INFO(this->get_logger(), "position: %.2f %.2f %.2f", 
-        // //     current_state.x(), current_state.y(), current_state.y());
-        // }
-        // cnt++;
-
         
-        // // 打印日志信息
-        // RCLCPP_INFO(this->get_logger(), "position: %.2f %.2f %.2f", 
-        //     current_state.x(), current_state.y(), current_state.y());
+        trajectory_.push_back(current_state.position);
+        
+        publishTrajectory(trajectory_);
+
+        saveTrajectory(current_state.position, "trajectory_with_lift.csv");
+
+
+
 
         // 发布状态更新到 TF
         geometry_msgs::msg::TransformStamped transform;
         transform.header.stamp = this->get_clock()->now();
         transform.header.frame_id = "world";
         transform.child_frame_id = "base_link";
-        transform.transform.translation.x = current_state.position.x();
-        transform.transform.translation.y = current_state.position.y();
-        transform.transform.translation.z = current_state.position.z();
+        transform.transform.translation.x = current_state.position.x()/1000.0;
+        transform.transform.translation.y = current_state.position.y()/1000.0;
+        transform.transform.translation.z = current_state.position.z()/1000.0;
         transform.transform.rotation.x = current_state.orientation.x();
         transform.transform.rotation.y = current_state.orientation.y();
         transform.transform.rotation.z = current_state.orientation.z();
@@ -188,23 +223,26 @@ double cnt = 0;
 
     Eigen::Vector3d RigidBodyNode::compute_force(const RigidBodyState& state) {
         // 重力
-        Eigen::Vector3d gravity_force(0, 0, -mass_ * 9.81);
+        Eigen::Vector3d gravity_force(0, 0, -mass_ * 9.81* pow(6371000 / (6371000 + state.position.z()), 2));
 
         // 恒外力
         Eigen::Vector3d constant_force = external_force_;
 
         // 气动力 之 摩擦阻力部分
+        
+        //更新气体密度
+        double air_density = rou_0_ * exp(- state.position.z() / 8500);
         // 摩擦力方向与速度方向相反
         Eigen::Vector3d friction_force = -friction_ * state.velocity* state.velocity.norm();
 
         // 气动力 之 升力
-        //升力方向垂直与速度方向向上
-        Eigen::Vector3d lift_force(0, 0, 0);
-        if (state.velocity.norm() > 1e-6) { // 确保速度非零，避免除以零
-            Eigen::Vector3d upward_vector(0, 0, 1); // 垂直向上的基准方向
-            Eigen::Vector3d lift_direction = state.velocity.cross(upward_vector).normalized(); // 升力方向
-            lift_force = lift_coefficient_ * state.velocity.squaredNorm() * lift_direction; // 升力大小
-        }
+        // //升力方向垂直与速度方向向上
+         Eigen::Vector3d lift_force(0, 0, 0);
+        // if (state.velocity.norm() > 1e-6) { // 确保速度非零，避免除以零
+        //     Eigen::Vector3d upward_vector(0, 0, 1); // 垂直向上的基准方向
+        //     Eigen::Vector3d lift_direction = state.velocity.cross(upward_vector).normalized(); // 升力方向
+        //     lift_force = 0.5*air_density*lift_coefficient_ * state.velocity.squaredNorm() * lift_direction; // 升力大小
+        // }
 
         // 气动力 之 侧力 升力
         // 侧力方向垂直于速度方向
@@ -212,11 +250,10 @@ double cnt = 0;
         if (state.velocity.norm() > 1e-6) { // 确保速度非零，避免除以零
             Eigen::Vector3d upward_vector(0, 0, 1); // 垂直向上的基准方向
             Eigen::Vector3d side_direction = state.velocity.cross(upward_vector).normalized(); // 侧力方向
-            side_force = side_coefficient_ * state.velocity.squaredNorm() * side_direction; // 侧力大小
+            side_force = 0.5*air_density*side_coefficient_ * state.velocity.squaredNorm() * side_direction; // 侧力大小
 
             Eigen::Vector3d lift_direction = side_direction.cross(state.velocity).normalized(); // 升力方向
-            lift_force = lift_coefficient_ * state.velocity.squaredNorm() * lift_direction; // 升力大小
-
+            lift_force = 0.5*air_density*lift_coefficient_ * state.velocity.squaredNorm() * lift_direction; // 升力大小
         }
 
 
@@ -322,8 +359,6 @@ RigidBodyState RigidBodyNode::runge_kutta_step(const RigidBodyState& current_sta
 // 主函数
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
-        
-
     rclcpp::spin(std::make_shared<rigid_body_simulation::RigidBodyNode>());
     rclcpp::shutdown();
     return 0;

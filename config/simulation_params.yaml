@@ -1,15 +1,17 @@
 rigid_body_node:
   ros__parameters:
     mass: 1.0 # 质量（kg）
-    friction_coefficient: 0.1 # 摩擦系数
-    lift_coefficient: 0.001 # 升力系数
-    side_coefficient: 0.001 # 侧力系数
+    friction_coefficient: 0.000 # 摩擦系数
+    lift_coefficient: 0.1 # 升力系数
+    side_coefficient: 0.00 # 侧力系数
     thrust_coefficient: 0.001 # 推力系数
-    time_step: 0.01  # 时间步长 (s)
+    rou_0: 1.225 # 海平面大气密度
+    S: 3.0 #气动面积
+    time_step: 0.5  # 时间步长 (s)
     inertia: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
     external_force: [0.0, 0.0, 0.0] # 外力
     external_torque: [0.0, 0.0, 0.0] # 外力矩
-    gravity: [0.0, 0.0, 0.0] # 重力
-    initial_position: [0.0, 0.0, 1000.0]  # 初始位置 (x, y, z)
-    initial_velocity: [0.0, 0.0, 0.0]  # 初始速度 (vx, vy, vz)
+    gravity: [0.0, 0.0, -9.8] # 重力
+    initial_position: [0.0, 0.0, 120000.0]  # 初始位置 (x, y, z)
+    initial_velocity: [3000.0, 0.0, 0.0]  # 初始速度 (vx, vy, vz)
     # initial_orientation: [1.0, 0.0, 0.0, 0.0]  # 初始四元数 (w, x, y, z)
